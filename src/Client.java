@@ -1,21 +1,22 @@
 import java.sql.*;
+import java.util.ResourceBundle;
 
 public class Client{
     private Statement stmt;
     private Connection conn;
+    private int timeout=20;
 
 
-    public Client(String host, String db, String port, String username, String password){
+    public Client(){
+        ResourceBundle configs = ResourceBundle.getBundle("test_config");
         try {
             Class.forName(("com.mysql.cj.jdbc.Driver"));
-            String url="jdbc:mysql://"+host+":"+port+"/"+db+"?serverTimezone=GMT";
+            String url="jdbc:mysql://"+configs.getString("host")+":"+configs.getString("port")+"/"+configs.getString("db")+"?serverTimezone=GMT";
 
-            this.conn=DriverManager.getConnection(url,username,password);
-//            if(conn!=null){
-//                System.out.print("连接成功");
-//            }
-
+            this.conn=DriverManager.getConnection(url,configs.getString("username"),configs.getString("password"));
             this.stmt = conn.createStatement();
+            this.timeout=Integer.parseInt(configs.getString("timeout"));
+            this.stmt.setQueryTimeout(this.timeout);
             /*
              * Statement有三种执行SQL的方法
              * 1.execute()可执行任何SQL语句返回boolean
@@ -36,7 +37,7 @@ public class Client{
                 rs = stmt.execute(SQL);
                 //ResultSet通过next()能向前迭代，通过各种getXxx()方法获取对应字段值
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                System.out.println("[SLOW SQL]exceeding time limit:"+timeout+"s");
             }
         }
         return rs;
