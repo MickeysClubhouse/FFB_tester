@@ -1,3 +1,5 @@
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 class Clerk{
@@ -7,10 +9,32 @@ class Clerk{
 
     //加入SQL
     public synchronized void produceProduct() {
+        String path = "/home/za/File/Git_File/Fintech-Benchmark/adapter/mysql/query";
+        File directory = new File(path);
+        File[] queryFiles = directory.listFiles();
+        ArrayList<String> querys = new ArrayList<String>();
+
+        // 读取目录下所有sql文件，将每条sql保存到querys中
+        for (int i = 0; i < queryFiles.length; i++) {
+            try{
+                Scanner scanner = new Scanner(queryFiles[i].toPath());
+                String query = "";
+                while(scanner.hasNextLine()){
+                    query = query + " " + scanner.nextLine();
+                }
+                querys.add(query);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
         if(productCount < 20){
             //todo:把这里的sql换成从文件中读
-            this.query.offer("select count(*) from title");
+
+            // 随机选取一个查询加入队列
+            int queryNum = new Random().nextInt(querys.size() - 1);
+            this.query.offer(querys.get(queryNum));
+//            System.out.println(querys.get(queryNum));
             productCount++;
             //System.out.println(Thread.currentThread().getName() + ": 加入第" + productCount + "条查询");
             notify();
@@ -22,19 +46,15 @@ class Clerk{
                 e.printStackTrace();
             }
         }
-
-
-
     }
 
     //执行查询
     public synchronized String consumeProduct() {
         String query="";
         if(productCount > 0){
-            //System.out.println(Thread.currentThread().getName() + ":开始执行第" + productCount + "条查询");
+//            System.out.println(Thread.currentThread().getName() + ":开始执行第" + productCount + "条查询");
             productCount--;
             query=this.query.poll();
-
             notify();
         }else{
             try {
@@ -43,7 +63,6 @@ class Clerk{
                 e.printStackTrace();
             }
         }
-
         return query;
     }
 
@@ -71,7 +90,7 @@ class Consumer extends Thread{  //消费者
     public Consumer(Clerk clerk){
         this.clerk = clerk;
         //todo:这里要改成对应的配置信息
-        this.client=new Client("127.0.0.1","imdb","4000","root","%s4E9v=FY-V76t2R*1");
+        this.client=new Client("127.0.0.1","testdb","3306","root","daslab3008");
     }
 
     @Override
@@ -84,7 +103,10 @@ class Consumer extends Thread{  //消费者
                 this.clerk.num++;
             }
         }
+    }
 
+    public void kill_client(){
+        this.client.release();
     }
 }
 
@@ -120,6 +142,7 @@ public class SQLtest {
                 for (Consumer c:
                      workers) {
                     c.interrupt();
+                    c.kill_client();
                 }
                 p1.stop();
 
@@ -129,7 +152,5 @@ public class SQLtest {
                 System.out.println("total tasks: "+clerk.num+"\nqps:"+qps);
             }
         },interval);
-
-
     }
 }

@@ -2,6 +2,7 @@ import java.sql.*;
 
 public class Client{
     private Statement stmt;
+    private Connection conn;
 
 
     public Client(String host, String db, String port, String username, String password){
@@ -9,11 +10,10 @@ public class Client{
             Class.forName(("com.mysql.cj.jdbc.Driver"));
             String url="jdbc:mysql://"+host+":"+port+"/"+db+"?serverTimezone=GMT";
 
-            Connection conn=DriverManager.getConnection(url,username,password);
+            this.conn=DriverManager.getConnection(url,username,password);
 //            if(conn!=null){
 //                System.out.print("连接成功");
 //            }
-
 
             this.stmt = conn.createStatement();
             /*
@@ -23,12 +23,9 @@ public class Client{
              * 3.executeUpdate()执行DML语句返回受影响记录数
              */
 
-
         } catch (ClassNotFoundException | SQLException e) {
             throw new RuntimeException(e);
         }
-
-
     }
 
     public boolean execSQL(String SQL){
@@ -38,16 +35,19 @@ public class Client{
             try {
                 rs = stmt.execute(SQL);
                 //ResultSet通过next()能向前迭代，通过各种getXxx()方法获取对应字段值
-
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
-
-
         return rs;
-
     }
 
-
+    public void release(){
+        try {
+            this.stmt.close();
+            this.conn.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
