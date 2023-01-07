@@ -4,6 +4,7 @@ import java.util.*;
 
 class Clerk{
     public int num=0;
+    public long sqlsExecTime = 0;  // 所有sql执行时间之和
     private int productCount = 0;
     private Queue<String> query = new LinkedList<String>(); //query队列，里面存放等待执行的query
     private ArrayList<String> querys = new ArrayList<String>(); //候选
@@ -96,10 +97,15 @@ class Consumer extends Thread{  //消费者
     public void run() {
         while(!Thread.currentThread().isInterrupted()){
             String query=clerk.consumeProduct();
+            long sqlExecTime;
+            long sqlStartTime = System.currentTimeMillis();
             boolean result=this.client.execSQL(query);
+            long sqlEndTime = System.currentTimeMillis();
             //System.out.println("result is:"+result);
             if (result==true){
                 this.clerk.num++;
+                sqlExecTime = sqlEndTime - sqlStartTime;  // 单条sql的执行时间
+                this.clerk.sqlsExecTime += sqlExecTime;
             }
         }
     }
@@ -149,8 +155,10 @@ public class SQLtest {
 
                 double time_passed= ((System.currentTimeMillis()-start)/1000.0);
                 double qps = clerk.num / time_passed;
+                double meanExecTime = clerk.sqlsExecTime / 1000.0 / clerk.num;
 
                 System.out.println("[RESULT]\ntotal tasks finished: "+clerk.num+"\nqps:"+qps);
+                System.out.println("meanExecTime: " + meanExecTime + " s");
 
                 for (Consumer c:
                         workers) {
